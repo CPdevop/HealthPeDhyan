@@ -19,6 +19,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
+    "admin:create": "node scripts/create-admin.js",
     "prepare": "husky install"
   },
   "dependencies": {
