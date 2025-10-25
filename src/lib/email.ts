@@ -1,5 +1,3 @@
-import nodemailer from 'nodemailer';
-
 interface ContactMessage {
   id: string;
   name: string;
@@ -12,11 +10,14 @@ interface ContactMessage {
 /**
  * Create email transporter
  * Supports both SMTP and Gmail
+ * Uses dynamic import to avoid Next.js bundling issues
  */
-function createTransporter() {
+async function createTransporter() {
+  const nodemailer = await import('nodemailer');
+
   // For production, use SMTP credentials from environment
   if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-    return nodemailer.createTransport({
+    return nodemailer.default.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT || '587'),
       secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
@@ -29,7 +30,7 @@ function createTransporter() {
 
   // For Gmail, use app-specific password
   if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-    return nodemailer.createTransport({
+    return nodemailer.default.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.GMAIL_USER,
@@ -40,7 +41,7 @@ function createTransporter() {
 
   // For development/testing - log to console only
   console.warn('No email credentials configured. Email will be logged to console only.');
-  return nodemailer.createTransport({
+  return nodemailer.default.createTransport({
     streamTransport: true,
     newline: 'unix',
     buffer: true,
@@ -51,7 +52,7 @@ function createTransporter() {
  * Send email notification for new contact form submission
  */
 export async function sendContactNotification(contactMessage: ContactMessage) {
-  const transporter = createTransporter();
+  const transporter = await createTransporter();
 
   const mailOptions = {
     from: process.env.SMTP_FROM || process.env.GMAIL_USER || 'noreply@healthpedhyan.com',
@@ -119,7 +120,7 @@ Reply to: ${contactMessage.email}
  * Send confirmation email to the person who submitted the form
  */
 export async function sendContactConfirmation(contactMessage: ContactMessage) {
-  const transporter = createTransporter();
+  const transporter = await createTransporter();
 
   const mailOptions = {
     from: process.env.SMTP_FROM || process.env.GMAIL_USER || 'hello@healthpedhyan.com',
