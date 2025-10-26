@@ -302,3 +302,33 @@ enum ContactMessageStatus {
   REPLIED
   ARCHIVED
 }
+
+// ============================================================================
+// LABEL SCANNER
+// ============================================================================
+
+model LabelScan {
+  id                String            @id @default(cuid())
+  imageUrl          String
+  ocrText           String?           @db.Text
+  extractedData     Json?             @db.JsonB
+  healthScore       Int?
+  analysisResult    Json?             @db.JsonB
+  status            LabelScanStatus   @default(PROCESSING)
+  userId            String?
+  productName       String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId])
+  @@index([healthScore])
+  @@map("label_scans")
+}
+
+enum LabelScanStatus {
+  PROCESSING
+  COMPLETED
+  FAILED
+}

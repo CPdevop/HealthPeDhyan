@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const navigation = [
+  { name: 'Scan Label', href: '/scan-label', highlight: true },
   { name: 'Shop', href: '/shop' },
   { name: 'Blog', href: '/blog' },
   { name: 'Ingredients', href: '/ingredients' },
@@ -46,16 +47,18 @@ export function AppHeader() {
         </div>
 
         {/* Desktop navigation */}
-        <div className="hidden lg:flex lg:gap-x-8">
+        <div className="hidden lg:flex lg:gap-x-8 lg:items-center">
           {navigation.map((item) => (
             <Link
               key={item.name}
               href={item.href}
               className={cn(
-                'text-sm font-medium transition-colors hover:text-primary-600',
-                pathname?.startsWith(item.href)
+                'text-sm font-medium transition-colors',
+                item.highlight
+                  ? 'rounded-full bg-primary-600 px-4 py-2 text-white hover:bg-primary-700'
+                  : pathname?.startsWith(item.href)
                   ? 'text-primary-600'
-                  : 'text-neutral-700'
+                  : 'text-neutral-700 hover:text-primary-600'
               )}
             >
               {item.name}
