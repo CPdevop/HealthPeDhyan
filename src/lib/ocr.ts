@@ -1,27 +1,23 @@
 import Tesseract from 'tesseract.js';
 
 /**
- * Extract text from an image using Tesseract OCR
- * Uses direct recognition API for Node.js compatibility (no Web Workers)
+ * Extract text from an image using Tesseract OCR v4
+ * Simplified API that works reliably in Node.js without worker threads
  */
 export async function extractTextFromImage(
   imageSource: string | File | Blob
 ): Promise<{ text: string; confidence: number }> {
-  console.log('🔍 Starting Tesseract OCR (direct recognition mode)...');
+  console.log('🔍 Starting Tesseract OCR v4 (Node.js compatible)...');
 
   try {
-    // Use direct recognize method instead of createWorker to avoid Web Worker issues
-    const result = await Tesseract.recognize(
-      imageSource,
-      'eng',
-      {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            console.log(`📊 OCR Progress: ${Math.round(m.progress * 100)}%`);
-          }
-        },
-      }
-    );
+    // Tesseract.js v4 has simpler, more reliable Node.js support
+    const result = await Tesseract.recognize(imageSource, 'eng', {
+      logger: (m: any) => {
+        if (m.status === 'recognizing text') {
+          console.log(`📊 OCR Progress: ${Math.round(m.progress * 100)}%`);
+        }
+      },
+    });
 
     console.log(`✅ Text recognition complete!`);
     console.log(`📝 Extracted ${result.data.text.length} characters with ${Math.round(result.data.confidence)}% confidence`);
