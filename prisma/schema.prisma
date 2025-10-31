@@ -35,6 +35,24 @@ enum UserRole {
 }
 
 // ============================================================================
+// OTP AUTHENTICATION
+// ============================================================================
+
+model LoginOtp {
+  id        String   @id @default(cuid())
+  email     String
+  otp       String
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([otp])
+  @@index([expiresAt])
+  @@map("login_otps")
+}
+
+// ============================================================================
 // PRODUCTS & BRANDS
 // ============================================================================
 

@@ -4,6 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { prisma } from './prisma';
 import { UserRole } from '@prisma/client';
+import { verifyOTP } from './otp';
 
 declare module 'next-auth' {
   interface Session {
@@ -37,12 +38,31 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        otp: { label: 'OTP', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password required');
         }
 
+        // Step 2: Verify OTP (OTP must be provided)
+        if (!credentials.otp) {
+          throw new Error('OTP is required. Please use /api/auth/request-otp first.');
+        }
+
+        console.log(`🔐 Step 2: Verifying OTP for ${credentials.email}`);
+
+        // Verify OTP first
+        const isValidOTP = await verifyOTP(credentials.email, credentials.otp);
+
+        if (!isValidOTP) {
+          console.log(`❌ Invalid or expired OTP for ${credentials.email}`);
+          throw new Error('Invalid or expired OTP');
+        }
+
+        console.log(`✅ OTP verified for ${credentials.email}`);
+
+        // OTP is valid, now verify password
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
@@ -56,6 +76,8 @@ export const authOptions: NextAuthOptions = {
         if (!isValidPassword) {
           throw new Error('Invalid credentials');
         }
+
+        console.log(`✅ Login successful for ${credentials.email}`);
 
         return {
           id: user.id,
