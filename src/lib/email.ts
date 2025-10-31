@@ -7,6 +7,13 @@ interface ContactMessage {
   createdAt: Date;
 }
 
+interface EmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  text: string;
+}
+
 /**
  * Check if email is configured
  */
@@ -15,6 +22,73 @@ function isEmailConfigured(): boolean {
     (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) ||
     (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD)
   );
+}
+
+/**
+ * Generic email sending function
+ * Used for OTP, notifications, etc.
+ */
+export async function sendEmail(options: EmailOptions) {
+  // If no email is configured, just log to console
+  if (!isEmailConfigured()) {
+    console.log('\n📧 EMAIL (not sent - no SMTP configured):');
+    console.log('━'.repeat(60));
+    console.log(`To: ${options.to}`);
+    console.log(`Subject: ${options.subject}`);
+    console.log('━'.repeat(60));
+    console.log(`Text:\n${options.text}`);
+    console.log('━'.repeat(60));
+    return { logged: true };
+  }
+
+  // Dynamically import nodemailer only when configured
+  const nodemailer = await import('nodemailer');
+
+  let transporter;
+
+  // For production, use SMTP credentials from environment
+  if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+    transporter = nodemailer.default.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  } else if (process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
+    // For Gmail, use app-specific password
+    transporter = nodemailer.default.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_APP_PASSWORD,
+      },
+    });
+  }
+
+  if (!transporter) {
+    console.warn('Email transporter could not be created');
+    return { error: 'Email not configured' };
+  }
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || process.env.GMAIL_USER || 'noreply@healthpedhyan.com',
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    text: options.text,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Email sent successfully:', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('❌ Failed to send email:', error);
+    throw error;
+  }
 }
 
 /**
