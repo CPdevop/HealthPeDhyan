@@ -350,3 +350,47 @@ enum LabelScanStatus {
   COMPLETED
   FAILED
 }
+
+// ============================================================================
+// TELEMETRY & ANALYTICS
+// ============================================================================
+
+model TelemetryEvent {
+  id              String             @id @default(cuid())
+  eventType       TelemetryEventType
+  eventName       String
+  userId          String?
+  sessionId       String?
+  userAgent       String?
+  ipAddress       String?
+
+  // Page/Route info
+  path            String?
+  referrer        String?
+
+  // Event data
+  properties      Json?              @db.JsonB
+
+  // Performance metrics
+  duration        Int?
+
+  // Metadata
+  createdAt       DateTime           @default(now())
+
+  @@index([eventType])
+  @@index([eventName])
+  @@index([userId])
+  @@index([sessionId])
+  @@index([createdAt])
+  @@index([path])
+  @@map("telemetry_events")
+}
+
+enum TelemetryEventType {
+  PAGE_VIEW
+  USER_ACTION
+  API_CALL
+  ERROR
+  PERFORMANCE
+  FEATURE_USAGE
+}
