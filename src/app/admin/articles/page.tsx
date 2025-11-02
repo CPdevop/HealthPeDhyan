@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Video } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
+import { DeleteButton } from '@/components/admin/delete-button';
 
 export default async function ArticlesListPage() {
   const session = await getServerSession(authOptions);
@@ -75,6 +76,7 @@ export default async function ArticlesListPage() {
                       Edit
                     </Link>
                   </Button>
+                  <DeleteButton id={article.id} type="article" title={article.title} />
                 </div>
               </div>
             ))}

@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit } from 'lucide-react';
+import { DeleteButton } from '@/components/admin/delete-button';
 
 export default async function ProductsListPage() {
   const session = await getServerSession(authOptions);
@@ -81,9 +82,7 @@ export default async function ProductsListPage() {
                       Edit
                     </Link>
                   </Button>
-                  <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <DeleteButton id={product.id} type="product" title={product.title} />
                 </div>
               </div>
             ))}
