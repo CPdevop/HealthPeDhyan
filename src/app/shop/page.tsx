@@ -5,6 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { generateMetadata as genMeta } from '@/lib/seo';
 import { cn } from '@/lib/utils';
+import { ProductCard } from '@/components/product-card';
+import { mockProducts, mockCategories } from '@/lib/mock-data';
 
 export const metadata = genMeta({
   title: 'Shop Healthy Products',
@@ -13,48 +15,59 @@ export const metadata = genMeta({
 });
 
 async function getProducts(searchParams: any) {
-  const where: any = {};
+  try {
+    const where: any = {};
 
-  if (searchParams.palmOilFree === 'true') {
-    where.isPalmOilFree = true;
-  }
-  if (searchParams.lowSugar === 'true') {
-    where.isLowSugar = true;
-  }
-  if (searchParams.wholeGrain === 'true') {
-    where.isWholeGrain = true;
-  }
-  if (searchParams.category) {
-    where.category = { slug: searchParams.category };
-  }
+    if (searchParams.palmOilFree === 'true') {
+      where.isPalmOilFree = true;
+    }
+    if (searchParams.lowSugar === 'true') {
+      where.isLowSugar = true;
+    }
+    if (searchParams.wholeGrain === 'true') {
+      where.isWholeGrain = true;
+    }
+    if (searchParams.category) {
+      where.category = { slug: searchParams.category };
+    }
 
-  const products = await prisma.product.findMany({
-    where,
-    include: {
-      brand: true,
-      category: true,
-      badges: {
-        include: { badge: true },
+    const products = await prisma.product.findMany({
+      where,
+      include: {
+        brand: true,
+        category: true,
+        badges: {
+          include: { badge: true },
+        },
+        affiliateLinks: true,
       },
-    },
-    orderBy: {
-      healthScore: 'desc',
-    },
-  });
+      orderBy: {
+        healthScore: 'desc',
+      },
+    });
 
-  return products;
+    return products;
+  } catch (error) {
+    console.log('Database not available, using mock data');
+    return null;
+  }
 }
 
 async function getCategories() {
-  const categories = await prisma.category.findMany({
-    include: {
-      _count: {
-        select: { products: true },
+  try {
+    const categories = await prisma.category.findMany({
+      include: {
+        _count: {
+          select: { products: true },
+        },
       },
-    },
-    orderBy: { name: 'asc' },
-  });
-  return categories;
+      orderBy: { name: 'asc' },
+    });
+    return categories;
+  } catch (error) {
+    console.log('Database not available, using mock data');
+    return null;
+  }
 }
 
 export default async function ShopPage({
@@ -62,15 +75,42 @@ export default async function ShopPage({
 }: {
   searchParams: { [key: string]: string | undefined };
 }) {
-  const [products, categories] = await Promise.all([
+  const [dbProducts, dbCategories] = await Promise.all([
     getProducts(searchParams),
     getCategories(),
   ]);
+
+  // Use database data if available, otherwise use mock data
+  let products = dbProducts && dbProducts.length > 0 ? dbProducts : mockProducts;
+  const categories = dbCategories && dbCategories.length > 0 ? dbCategories : mockCategories.map(cat => ({
+    ...cat,
+    _count: { products: mockProducts.filter(p => p.category.name === cat.name).length }
+  }));
+  const usingMockData = !dbProducts || dbProducts.length === 0;
+
+  // Apply filters to mock data
+  if (usingMockData && searchParams) {
+    products = products.filter((p: any) => {
+      if (searchParams.palmOilFree === 'true' && !p.isPalmOilFree) return false;
+      if (searchParams.lowSugar === 'true' && !p.isLowSugar) return false;
+      if (searchParams.wholeGrain === 'true' && !p.isWholeGrain) return false;
+      if (searchParams.category && p.category.slug !== searchParams.category) return false;
+      return true;
+    });
+  }
 
   const activeCategory = searchParams.category;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 lg:px-8">
+      {usingMockData && (
+        <div className="mb-6 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg p-4 text-center">
+          <p className="text-sm font-medium">
+            🌟 Demo Mode - Viewing Sample Products | Full catalog available after backend deployment
+          </p>
+        </div>
+      )}
+
       <div className="mb-8">
         <h1 className="text-4xl font-bold text-neutral-900">Shop Healthy Products</h1>
         <p className="mt-2 text-neutral-600">
@@ -168,33 +208,8 @@ export default async function ShopPage({
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {products.map((product) => (
-              <Card key={product.id} className="group">
-                <CardHeader>
-                  <div className="aspect-square bg-neutral-100 rounded-xl mb-4 flex items-center justify-center">
-                    <span className="text-neutral-400 text-sm">Product Image</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {product.badges.slice(0, 3).map((pb) => (
-                      <Badge key={pb.badge.id} variant="success">
-                        {pb.badge.name}
-                      </Badge>
-                    ))}
-                  </div>
-                  <CardTitle className="text-xl group-hover:text-primary-600 transition-colors">
-                    <Link href={`/product/${product.slug}`}>{product.title}</Link>
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {product.brand.name} · {product.category.name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-neutral-600 line-clamp-2">{product.shortSummary}</p>
-                  <Button asChild className="mt-4 w-full">
-                    <Link href={`/product/${product.slug}`}>View Details</Link>
-                  </Button>
-                </CardContent>
-              </Card>
+            {products.map((product: any) => (
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
 

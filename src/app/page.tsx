@@ -5,42 +5,63 @@ import { Badge } from '@/components/ui/badge';
 import { prisma } from '@/lib/prisma';
 import { formatDate } from '@/lib/utils';
 import { generateOrganizationSchema, generateWebsiteSchema } from '@/lib/seo';
+import { ProductCard } from '@/components/product-card';
+import { mockProducts, mockArticles } from '@/lib/mock-data';
+import Image from 'next/image';
 
 async function getFeaturedProducts() {
-  return await prisma.product.findMany({
-    where: {
-      isMeetsStandard: true,
-    },
-    include: {
-      brand: true,
-      category: true,
-      badges: {
-        include: {
-          badge: true,
-        },
+  try {
+    return await prisma.product.findMany({
+      where: {
+        isMeetsStandard: true,
       },
-    },
-    take: 6,
-    orderBy: {
-      healthScore: 'desc',
-    },
-  });
+      include: {
+        brand: true,
+        category: true,
+        badges: {
+          include: {
+            badge: true,
+          },
+        },
+        affiliateLinks: true,
+      },
+      take: 6,
+      orderBy: {
+        healthScore: 'desc',
+      },
+    });
+  } catch (error) {
+    // Return mock data if database is not available
+    console.log('Database not available, using mock data');
+    return null;
+  }
 }
 
 async function getRecentArticles() {
-  return await prisma.article.findMany({
-    where: {
-      status: 'PUBLISHED',
-    },
-    orderBy: {
-      publishedAt: 'desc',
-    },
-    take: 3,
-  });
+  try {
+    return await prisma.article.findMany({
+      where: {
+        status: 'PUBLISHED',
+      },
+      orderBy: {
+        publishedAt: 'desc',
+      },
+      take: 3,
+    });
+  } catch (error) {
+    // Return mock data if database is not available
+    console.log('Database not available, using mock data');
+    return null;
+  }
 }
 
 export default async function HomePage() {
-  const [products, articles] = await Promise.all([getFeaturedProducts(), getRecentArticles()]);
+  const [dbProducts, dbArticles] = await Promise.all([getFeaturedProducts(), getRecentArticles()]);
+
+  // Use database data if available, otherwise use mock data
+  const products = dbProducts && dbProducts.length > 0 ? dbProducts : mockProducts;
+  const articles = dbArticles && dbArticles.length > 0 ? dbArticles : mockArticles;
+  const usingMockData = !dbProducts || dbProducts.length === 0;
 
   return (
     <>
@@ -52,6 +73,19 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(generateWebsiteSchema()) }}
       />
+
+      {/* Demo Mode Banner */}
+      {usingMockData && (
+        <section className="bg-gradient-to-r from-amber-500 to-orange-500 py-3">
+          <div className="mx-auto max-w-7xl px-4 lg:px-8">
+            <div className="text-center text-white">
+              <p className="text-sm font-medium">
+                🌟 Demo Mode - Viewing Sample Products | Full catalog available after backend deployment
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Hero Section */}
       <section className="bg-gradient-to-b from-primary-50 to-white py-20 lg:py-32">
@@ -95,36 +129,22 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {products.map((product) => (
-              <Card key={product.id} className="group">
-                <CardHeader>
-                  <div className="aspect-square bg-neutral-100 rounded-xl mb-4 flex items-center justify-center">
-                    <span className="text-neutral-400 text-sm">Product Image</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {product.badges.slice(0, 2).map((pb) => (
-                      <Badge key={pb.badge.id} variant="success">
-                        {pb.badge.name}
-                      </Badge>
-                    ))}
-                  </div>
-                  <CardTitle className="text-xl group-hover:text-primary-600 transition-colors">
-                    <Link href={`/product/${product.slug}`}>{product.title}</Link>
-                  </CardTitle>
-                  <CardDescription className="text-xs text-neutral-500">
-                    {product.brand.name}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-neutral-600 line-clamp-2">{product.shortSummary}</p>
-                  <div className="mt-4 flex gap-2">
-                    <Button asChild size="sm" className="flex-1">
-                      <Link href={`/product/${product.slug}`}>View Details</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
+
+          {usingMockData && (
+            <div className="mt-12 text-center">
+              <div className="inline-flex items-center gap-2 px-6 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <span className="text-sm text-blue-800">
+                  💡 <strong>Tip:</strong> Deploy your backend to see your full product catalog. See{' '}
+                  <Link href="/docs/deployment" className="underline font-medium">
+                    DEPLOYMENT_GUIDE.md
+                  </Link>
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -163,32 +183,43 @@ export default async function HomePage() {
 
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             {articles.map((article) => (
-              <Card key={article.id}>
-                <CardHeader>
-                  <div className="aspect-video bg-neutral-100 rounded-xl mb-4 flex items-center justify-center">
-                    <span className="text-neutral-400 text-sm">Article Cover</span>
-                  </div>
-                  {article.category && (
-                    <Badge variant="secondary" className="w-fit">
-                      {article.category}
-                    </Badge>
-                  )}
-                  <CardTitle className="mt-2">
-                    <Link
-                      href={`/blog/${article.slug}`}
-                      className="hover:text-primary-600 transition-colors"
-                    >
-                      {article.title}
+              <Card key={article.id} className="group overflow-hidden hover:shadow-xl transition-all duration-300">
+                <CardHeader className="p-0">
+                  {article.coverImage && (
+                    <Link href={`/blog/${article.slug}`} className="block relative aspect-video overflow-hidden">
+                      <Image
+                        src={article.coverImage}
+                        alt={article.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
                     </Link>
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    {article.publishedAt ? formatDate(article.publishedAt) : 'Draft'}
-                  </CardDescription>
+                  )}
+                  <div className="p-6">
+                    {article.category && (
+                      <Badge variant="secondary" className="w-fit mb-3">
+                        {article.category}
+                      </Badge>
+                    )}
+                    <CardTitle className="text-xl leading-tight">
+                      <Link
+                        href={`/blog/${article.slug}`}
+                        className="hover:text-primary-600 transition-colors"
+                      >
+                        {article.title}
+                      </Link>
+                    </CardTitle>
+                    <CardDescription className="text-xs mt-2">
+                      {article.publishedAt ? formatDate(article.publishedAt) : 'Draft'}
+                    </CardDescription>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-neutral-600 line-clamp-3">{article.excerpt}</p>
-                  <Button asChild variant="link" className="mt-4 px-0">
-                    <Link href={`/blog/${article.slug}`}>Read more →</Link>
+                <CardContent className="pt-0">
+                  <p className="text-sm text-neutral-600 line-clamp-3 mb-4">{article.excerpt}</p>
+                  <Button asChild variant="link" className="px-0 font-semibold group-hover:gap-2 transition-all">
+                    <Link href={`/blog/${article.slug}`}>
+                      Read Full Article <span className="group-hover:translate-x-1 transition-transform inline-block">→</span>
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
