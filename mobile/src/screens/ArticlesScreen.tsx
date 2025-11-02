@@ -15,7 +15,7 @@ import { theme } from '../constants/theme';
 
 export default function ArticlesScreen() {
   const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,7 +31,9 @@ export default function ArticlesScreen() {
       const data = await getArticles();
       setArticles(data);
     } catch (err: any) {
+      console.error('Error loading articles:', err);
       setError(err.message || 'Failed to load articles');
+      setArticles([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -39,7 +41,8 @@ export default function ArticlesScreen() {
   };
 
   useEffect(() => {
-    fetchArticles();
+    // Don't fetch on mount - user can pull to refresh
+    // fetchArticles();
   }, []);
 
   const handleArticlePress = async (article: Article) => {

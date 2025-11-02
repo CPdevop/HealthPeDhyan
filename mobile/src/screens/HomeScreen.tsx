@@ -20,7 +20,7 @@ type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +36,9 @@ export default function HomeScreen() {
       const data = await getProducts();
       setProducts(data);
     } catch (err: any) {
+      console.error('Error loading products:', err);
       setError(err.message || 'Failed to load products');
+      setProducts([]); // Set empty array on error
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -44,7 +46,9 @@ export default function HomeScreen() {
   };
 
   useEffect(() => {
-    fetchProducts();
+    // Don't fetch on mount - let user trigger it
+    // This prevents crash on startup if backend is unreachable
+    // fetchProducts();
   }, []);
 
   const handleProductPress = (product: Product) => {
@@ -55,51 +59,59 @@ export default function HomeScreen() {
     fetchProducts(true);
   };
 
+  const handleLoadProducts = () => {
+    fetchProducts(false);
+  };
+
   if (loading) {
     return <Loading message="Loading products..." />;
   }
 
-  if (error && !refreshing) {
-    return <ErrorView message={error} onRetry={() => fetchProducts()} />;
+  if (error && products.length === 0) {
+    return <ErrorView message={error} onRetry={handleLoadProducts} />;
   }
 
   return (
     <View style={styles.container}>
       {/* Header Section */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Featured Products</Text>
+        <Text style={styles.headerTitle}>HealthPeDhyan</Text>
         <Text style={styles.headerSubtitle}>
-          Discover healthier food choices
+          Make Informed Food Choices 🌿
         </Text>
       </View>
 
-      {/* Products Grid */}
-      <FlatList
-        data={products}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <ProductCard
-            product={item}
-            onPress={() => handleProductPress(item)}
-          />
-        )}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={theme.colors.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No products found</Text>
-          </View>
-        }
-      />
+      {products.length === 0 ? (
+        <View style={styles.welcomeContainer}>
+          <Text style={styles.welcomeEmoji}>🏠</Text>
+          <Text style={styles.welcomeTitle}>Welcome!</Text>
+          <Text style={styles.welcomeText}>
+            Pull down to refresh and load products from the server
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={products}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ProductCard
+              product={item}
+              onPress={() => handleProductPress(item)}
+            />
+          )}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={theme.colors.primary}
+            />
+          }
+        />
+      )}
     </View>
   );
 }
@@ -123,20 +135,30 @@ const styles = StyleSheet.create({
     color: theme.colors.background,
     opacity: 0.9,
   },
+  welcomeContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: theme.spacing.xl,
+  },
+  welcomeEmoji: {
+    fontSize: 80,
+    marginBottom: theme.spacing.md,
+  },
+  welcomeTitle: {
+    ...theme.typography.h2,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.sm,
+  },
+  welcomeText: {
+    ...theme.typography.body,
+    color: theme.colors.textSecondary,
+    textAlign: 'center',
+  },
   listContent: {
     padding: theme.spacing.md,
   },
   row: {
     justifyContent: 'space-between',
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: theme.spacing.xxl,
-  },
-  emptyText: {
-    ...theme.typography.body,
-    color: theme.colors.textSecondary,
   },
 });

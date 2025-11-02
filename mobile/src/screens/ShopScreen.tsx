@@ -25,7 +25,7 @@ export default function ShopScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchData = async () => {
@@ -41,14 +41,18 @@ export default function ShopScreen() {
       setProducts(productsData);
       setCategories(categoriesData);
     } catch (err: any) {
+      console.error('Error loading shop data:', err);
       setError(err.message || 'Failed to load data');
+      setProducts([]);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    // Don't fetch on mount - user can pull to refresh
+    // fetchData();
   }, [selectedCategory]);
 
   const filteredProducts = products.filter((product) =>
