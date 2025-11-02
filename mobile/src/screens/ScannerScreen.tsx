@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,38 +8,33 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { CameraView, Camera } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { uploadLabel, pollScanResult } from '../services/api';
 import { LabelScan } from '../types';
 import { theme } from '../constants/theme';
 
 export default function ScannerScreen() {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
   const [scanning, setScanning] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [scanResult, setScanResult] = useState<LabelScan | null>(null);
   const [showCamera, setShowCamera] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
-
-  const handleTakePicture = async (camera: any) => {
-    if (scanning) return;
+  const handleTakePicture = async () => {
+    if (scanning || !cameraRef.current) return;
 
     try {
       setScanning(true);
-      const photo = await camera.takePictureAsync({
+      const photo = await cameraRef.current.takePictureAsync({
         quality: 0.8,
-        base64: false,
       });
 
-      setShowCamera(false);
-      await handleImageScan(photo.uri);
+      if (photo) {
+        setShowCamera(false);
+        await handleImageScan(photo.uri);
+      }
     } catch (error: any) {
       Alert.alert('Error', 'Failed to take picture');
       setScanning(false);
@@ -95,22 +90,22 @@ export default function ScannerScreen() {
     setShowCamera(true);
   };
 
-  if (hasPermission === null) {
+  const handleOpenCamera = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (!result.granted) {
+        Alert.alert('Permission Denied', 'Camera access is required to scan labels');
+        return;
+      }
+    }
+    setShowCamera(true);
+  };
+
+  if (!permission) {
     return (
       <View style={styles.container}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.permissionText}>Requesting camera permission...</Text>
-      </View>
-    );
-  }
-
-  if (hasPermission === false) {
-    return (
-      <View style={styles.container}>
-        <Text style={styles.permissionText}>Camera permission denied</Text>
-        <Text style={styles.permissionSubtext}>
-          Please enable camera access in your device settings
-        </Text>
+        <Text style={styles.permissionText}>Loading...</Text>
       </View>
     );
   }
@@ -118,31 +113,33 @@ export default function ScannerScreen() {
   if (showCamera) {
     return (
       <View style={styles.cameraContainer}>
-        <CameraView style={styles.camera} facing="back">
-          {({ takePictureAsync }) => (
-            <View style={styles.cameraControls}>
-              <View style={styles.cameraFrame} />
+        <CameraView
+          ref={cameraRef}
+          style={styles.camera}
+          facing="back"
+        >
+          <View style={styles.cameraControls}>
+            <View style={styles.cameraFrame} />
 
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={() => setShowCamera(false)}
-                >
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => setShowCamera(false)}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.captureButton}
-                  onPress={() => handleTakePicture({ takePictureAsync })}
-                  disabled={scanning}
-                >
-                  <View style={styles.captureButtonInner} />
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.captureButton}
+                onPress={handleTakePicture}
+                disabled={scanning}
+              >
+                <View style={styles.captureButtonInner} />
+              </TouchableOpacity>
 
-                <View style={{ width: 80 }} />
-              </View>
+              <View style={{ width: 80 }} />
             </View>
-          )}
+          </View>
         </CameraView>
       </View>
     );
@@ -223,7 +220,7 @@ export default function ScannerScreen() {
       <View style={styles.actionsContainer}>
         <TouchableOpacity
           style={styles.primaryButton}
-          onPress={() => setShowCamera(true)}
+          onPress={handleOpenCamera}
         >
           <Text style={styles.primaryButtonText}>📸 Take Photo</Text>
         </TouchableOpacity>
