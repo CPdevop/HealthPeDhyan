@@ -18,20 +18,46 @@ model User {
   id           String   @id @default(cuid())
   email        String   @unique
   name         String?
-  passwordHash String
-  role         UserRole @default(EDITOR)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  passwordHash String?
+  role         UserRole @default(USER)
 
-  articles Article[]
+  // Email verification
+  emailVerified     Boolean   @default(false)
+  verificationToken String?   @unique
+
+  // Password reset
+  resetToken       String?   @unique
+  resetTokenExpiry DateTime?
+
+  // Login tracking
+  lastLoginAt DateTime?
+  loginCount  Int       @default(0)
+
+  // OAuth
+  provider     String?   // 'google', 'facebook', 'credentials'
+  providerId   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  articles      Article[]
+  profile       UserProfile?
+  bookmarks     Bookmark[]
+  productViews  ProductView[]
+  searchHistory SearchHistory[]
+  lists         UserList[]
 
   @@index([email])
+  @@index([verificationToken])
+  @@index([resetToken])
   @@map("users")
 }
 
 enum UserRole {
   ADMIN
   EDITOR
+  USER
 }
 
 // ============================================================================
@@ -50,6 +76,144 @@ model LoginOtp {
   @@index([otp])
   @@index([expiresAt])
   @@map("login_otps")
+}
+
+// ============================================================================
+// USER PROFILE & PREFERENCES
+// ============================================================================
+
+model UserProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Dietary preferences
+  isVegetarian Boolean @default(false)
+  isVegan      Boolean @default(false)
+  isGlutenFree Boolean @default(false)
+  isDairyFree  Boolean @default(false)
+  isNutFree    Boolean @default(false)
+  isKeto       Boolean @default(false)
+  isPaleo      Boolean @default(false)
+
+  // Health goals (stored as JSON array)
+  healthGoals Json? @db.JsonB // ["weight_loss", "muscle_gain", "heart_health"]
+  allergies   Json? @db.JsonB // ["peanuts", "shellfish", "soy"]
+
+  // Preferences
+  favoriteBrands    Json? @db.JsonB // Array of brand IDs
+  avoidIngredients  Json? @db.JsonB // Array of ingredient names
+  preferredMerchant String? // 'AMAZON', 'FLIPKART', etc.
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("user_profiles")
+}
+
+// ============================================================================
+// BOOKMARKS & FAVORITES
+// ============================================================================
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String?
+  articleId String?
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  article Article? @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+  @@unique([userId, articleId])
+  @@index([userId])
+  @@index([productId])
+  @@index([articleId])
+  @@index([createdAt])
+  @@map("bookmarks")
+}
+
+// ============================================================================
+// USER LISTS & COLLECTIONS
+// ============================================================================
+
+model UserList {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  isPublic    Boolean  @default(false)
+  slug        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items ListItem[]
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, slug])
+  @@index([userId])
+  @@index([isPublic])
+  @@map("user_lists")
+}
+
+model ListItem {
+  id        String   @id @default(cuid())
+  listId    String
+  productId String?
+  articleId String?
+  notes     String?  @db.Text
+  order     Int      @default(0)
+  addedAt   DateTime @default(now())
+
+  list    UserList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+  article Article? @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@index([listId])
+  @@index([productId])
+  @@index([articleId])
+  @@map("list_items")
+}
+
+// ============================================================================
+// USER ACTIVITY TRACKING
+// ============================================================================
+
+model ProductView {
+  id        String   @id @default(cuid())
+  userId    String?
+  productId String
+  sessionId String?
+  viewedAt  DateTime @default(now())
+
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([productId])
+  @@index([sessionId])
+  @@index([viewedAt])
+  @@map("product_views")
+}
+
+model SearchHistory {
+  id           String   @id @default(cuid())
+  userId       String
+  query        String
+  filters      Json?    @db.JsonB
+  resultsCount Int
+  searchedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([searchedAt])
+  @@map("search_history")
 }
 
 // ============================================================================
@@ -108,11 +272,14 @@ model Product {
   isMeetsStandard        Boolean @default(false)
 
   // Relations
-  brand           Brand             @relation(fields: [brandId], references: [id], onDelete: Cascade)
-  category        Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  brand           Brand                   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  category        Category                @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   badges          ProductBadge[]
   ingredientFlags ProductIngredientFlag[]
   affiliateLinks  AffiliateLink[]
+  bookmarks       Bookmark[]
+  listItems       ListItem[]
+  views           ProductView[]
 
   @@index([slug])
   @@index([brandId])
@@ -234,7 +401,9 @@ model Article {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  author    User?      @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  bookmarks Bookmark[]
+  listItems ListItem[]
 
   @@index([slug])
   @@index([status])
