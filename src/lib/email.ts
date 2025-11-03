@@ -210,3 +210,167 @@ export async function sendContactConfirmation(contactMessage: ContactMessage) {
   console.log(`Confirmation email skipped for: ${contactMessage.email}`);
   return { skipped: true };
 }
+
+/**
+ * Send email verification link to new users
+ */
+export async function sendVerificationEmail(email: string, name: string, verificationUrl: string) {
+  return sendEmail({
+    to: email,
+    subject: 'Verify your HealthPeDhyan account',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to HealthPeDhyan!</h1>
+        </div>
+
+        <div style="padding: 40px 30px; background-color: #ffffff;">
+          <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
+            Hi ${name},
+          </p>
+
+          <p style="font-size: 16px; color: #374151; line-height: 1.6; margin-bottom: 20px;">
+            Thank you for joining HealthPeDhyan! We're excited to help you make healthier choices.
+          </p>
+
+          <p style="font-size: 16px; color: #374151; line-height: 1.6; margin-bottom: 30px;">
+            Please verify your email address to activate your account and start exploring healthy products:
+          </p>
+
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${verificationUrl}"
+               style="background-color: #059669; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+              Verify Email Address
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin-top: 30px;">
+            If the button doesn't work, copy and paste this link into your browser:
+          </p>
+          <p style="font-size: 12px; color: #9ca3af; word-break: break-all;">
+            ${verificationUrl}
+          </p>
+
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+            <p style="font-size: 14px; color: #6b7280; margin-bottom: 10px;">
+              <strong>What's next?</strong>
+            </p>
+            <ul style="font-size: 14px; color: #6b7280; line-height: 1.8;">
+              <li>Complete your health profile</li>
+              <li>Set your dietary preferences</li>
+              <li>Bookmark your favorite products</li>
+              <li>Get personalized recommendations</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="padding: 20px; background-color: #f9fafb; text-align: center;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+            This link will expire in 24 hours. If you didn't create an account, you can safely ignore this email.
+          </p>
+          <p style="color: #9ca3af; font-size: 11px; margin-top: 10px;">
+            © ${new Date().getFullYear()} HealthPeDhyan. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+    text: `
+Welcome to HealthPeDhyan!
+
+Hi ${name},
+
+Thank you for joining HealthPeDhyan! We're excited to help you make healthier choices.
+
+Please verify your email address to activate your account:
+${verificationUrl}
+
+This link will expire in 24 hours.
+
+What's next?
+- Complete your health profile
+- Set your dietary preferences
+- Bookmark your favorite products
+- Get personalized recommendations
+
+If you didn't create an account, you can safely ignore this email.
+
+© ${new Date().getFullYear()} HealthPeDhyan. All rights reserved.
+    `,
+  });
+}
+
+/**
+ * Send password reset email
+ */
+export async function sendPasswordResetEmail(email: string, name: string, resetUrl: string) {
+  return sendEmail({
+    to: email,
+    subject: 'Reset your HealthPeDhyan password',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 30px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Password Reset Request</h1>
+        </div>
+
+        <div style="padding: 40px 30px; background-color: #ffffff;">
+          <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">
+            Hi ${name},
+          </p>
+
+          <p style="font-size: 16px; color: #374151; line-height: 1.6; margin-bottom: 20px;">
+            We received a request to reset your password for your HealthPeDhyan account.
+          </p>
+
+          <p style="font-size: 16px; color: #374151; line-height: 1.6; margin-bottom: 30px;">
+            Click the button below to create a new password:
+          </p>
+
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${resetUrl}"
+               style="background-color: #059669; color: white; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+              Reset Password
+            </a>
+          </div>
+
+          <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin-top: 30px;">
+            If the button doesn't work, copy and paste this link into your browser:
+          </p>
+          <p style="font-size: 12px; color: #9ca3af; word-break: break-all;">
+            ${resetUrl}
+          </p>
+
+          <div style="margin-top: 40px; padding: 20px; background-color: #fef3c7; border-radius: 8px;">
+            <p style="font-size: 14px; color: #92400e; margin: 0;">
+              <strong>⚠️ Security Notice:</strong> If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+            </p>
+          </div>
+        </div>
+
+        <div style="padding: 20px; background-color: #f9fafb; text-align: center;">
+          <p style="color: #6b7280; font-size: 12px; margin: 0;">
+            This link will expire in 1 hour for security reasons.
+          </p>
+          <p style="color: #9ca3af; font-size: 11px; margin-top: 10px;">
+            © ${new Date().getFullYear()} HealthPeDhyan. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `,
+    text: `
+Password Reset Request
+
+Hi ${name},
+
+We received a request to reset your password for your HealthPeDhyan account.
+
+Click this link to create a new password:
+${resetUrl}
+
+This link will expire in 1 hour for security reasons.
+
+⚠️ Security Notice: If you didn't request a password reset, please ignore this email. Your password will remain unchanged.
+
+© ${new Date().getFullYear()} HealthPeDhyan. All rights reserved.
+    `,
+  });
+}

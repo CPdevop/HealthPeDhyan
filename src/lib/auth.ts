@@ -13,6 +13,7 @@ declare module 'next-auth' {
       email: string;
       name: string | null;
       role: UserRole;
+      emailVerified: boolean;
     };
   }
 
@@ -21,6 +22,7 @@ declare module 'next-auth' {
     email: string;
     name: string | null;
     role: UserRole;
+    emailVerified: boolean;
   }
 }
 
@@ -28,6 +30,7 @@ declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
     role: UserRole;
+    emailVerified: boolean;
   }
 }
 
@@ -45,45 +48,66 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Email and password required');
         }
 
-        // Step 2: Verify OTP (OTP must be provided)
-        if (!credentials.otp) {
-          throw new Error('OTP is required. Please use /api/auth/request-otp first.');
-        }
-
-        console.log(`🔐 Step 2: Verifying OTP for ${credentials.email}`);
-
-        // Verify OTP first
-        const isValidOTP = await verifyOTP(credentials.email, credentials.otp);
-
-        if (!isValidOTP) {
-          console.log(`❌ Invalid or expired OTP for ${credentials.email}`);
-          throw new Error('Invalid or expired OTP');
-        }
-
-        console.log(`✅ OTP verified for ${credentials.email}`);
-
-        // OTP is valid, now verify password
+        // First, check if user exists
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            passwordHash: true,
+            role: true,
+            emailVerified: true,
+          }
         });
 
-        if (!user) {
+        if (!user || !user.passwordHash) {
           throw new Error('Invalid credentials');
         }
 
+        // For ADMIN/EDITOR roles, OTP is required
+        if ((user.role === UserRole.ADMIN || user.role === UserRole.EDITOR) && !credentials.otp) {
+          throw new Error('OTP is required for admin access. Please use /api/auth/request-otp first.');
+        }
+
+        // Verify OTP for admin users
+        if (user.role === UserRole.ADMIN || user.role === UserRole.EDITOR) {
+          console.log(`🔐 Verifying OTP for admin ${credentials.email}`);
+
+          const isValidOTP = await verifyOTP(credentials.email, credentials.otp!);
+
+          if (!isValidOTP) {
+            console.log(`❌ Invalid or expired OTP for ${credentials.email}`);
+            throw new Error('Invalid or expired OTP');
+          }
+
+          console.log(`✅ OTP verified for ${credentials.email}`);
+        }
+
+        // Verify password
         const isValidPassword = await bcrypt.compare(credentials.password, user.passwordHash);
 
         if (!isValidPassword) {
           throw new Error('Invalid credentials');
         }
 
-        console.log(`✅ Login successful for ${credentials.email}`);
+        // Update last login stats
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            lastLoginAt: new Date(),
+            loginCount: { increment: 1 }
+          }
+        });
+
+        console.log(`✅ Login successful for ${credentials.email} (${user.role})`);
 
         return {
           id: user.id,
           email: user.email,
           name: user.name,
           role: user.role,
+          emailVerified: user.emailVerified,
         };
       },
     }),
@@ -93,14 +117,15 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   pages: {
-    signIn: '/admin/login',
-    error: '/admin/login',
+    signIn: '/login',
+    error: '/login',
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = user.role;
+        token.emailVerified = user.emailVerified;
       }
       return token;
     },
@@ -108,6 +133,7 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
+        session.user.emailVerified = token.emailVerified;
       }
       return session;
     },
