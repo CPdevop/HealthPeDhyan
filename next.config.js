@@ -2,6 +2,23 @@
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  // Exclude mobile directory from webpack compilation
+  webpack: (config, { isServer }) => {
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ['**/node_modules', '**/mobile/**', '**/.git'],
+    };
+    return config;
+  },
+  // Skip linting during production builds - Vercel will run it separately
+  eslint: {
+    ignoreDuringBuilds: false,
+    dirs: ['src', 'pages'],
+  },
+  typescript: {
+    // Disable type checking during build - Vercel runs it separately
+    ignoreBuildErrors: false,
+  },
   images: {
     formats: ['image/avif', 'image/webp'],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],

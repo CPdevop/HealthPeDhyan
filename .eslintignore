@@ -1,0 +1,25 @@
+# Dependencies
+node_modules
+
+# Build outputs
+.next
+out
+dist
+build
+
+# Mobile app directory
+mobile
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.DS_Store
+*.log
+.env*
+!.env.example
+
+# Scripts and migrations
+scripts/*.js
+prisma/migrations
