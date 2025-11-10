@@ -4,18 +4,6 @@
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": "nextjs",
   "regions": ["bom1"],
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./",
-  "env": {
-    "DATABASE_URL": "@database_url",
-    "NEXTAUTH_SECRET": "@nextauth_secret",
-    "NEXTAUTH_URL": "@nextauth_url"
-  },
-  "build": {
-    "env": {
-      "DATABASE_URL": "@database_url",
-      "NEXTAUTH_SECRET": "@nextauth_secret"
-    }
-  },
   "functions": {
     "api/**/*.ts": {
       "maxDuration": 30
