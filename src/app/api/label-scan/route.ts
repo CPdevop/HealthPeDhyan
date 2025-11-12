@@ -5,6 +5,7 @@ import { analyzeLabelData } from '@/lib/label-analysis';
 import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
+import { Prisma } from '@prisma/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -123,7 +124,7 @@ async function processLabelScan(scanId: string, imagePath: string) {
         },
         productName: parsed.productName,
         healthScore: analysis.overallScore,
-        analysisResult: analysis,
+        analysisResult: analysis as Prisma.InputJsonValue,
       },
     });
 
