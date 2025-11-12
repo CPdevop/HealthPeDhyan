@@ -32,6 +32,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user has a password hash
+    if (!user.passwordHash) {
+      return NextResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 }
+      );
+    }
+
     // Verify password
     const isValidPassword = await bcrypt.compare(password, user.passwordHash);
 
