@@ -124,7 +124,7 @@ async function processLabelScan(scanId: string, imagePath: string) {
         },
         productName: parsed.productName,
         healthScore: analysis.overallScore,
-        analysisResult: analysis as Prisma.InputJsonValue,
+        analysisResult: JSON.parse(JSON.stringify(analysis)),
       },
     });
 
