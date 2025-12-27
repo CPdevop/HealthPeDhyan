@@ -1,9 +1,12 @@
 {
   "version": 2,
-  "buildCommand": "pnpm prisma generate && pnpm build",
+  "buildCommand": "pnpm prisma generate && pnpm prisma migrate deploy && pnpm build",
   "installCommand": "pnpm install --frozen-lockfile",
   "framework": "nextjs",
   "regions": ["bom1"],
+  "env": {
+    "DATABASE_URL": "@database_url"
+  },
   "headers": [
     {
       "source": "/(.*)",
@@ -23,6 +26,19 @@
         {
           "key": "Referrer-Policy",
           "value": "origin-when-cross-origin"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    },
+    {
+      "source": "/api/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, must-revalidate"
         }
       ]
     }

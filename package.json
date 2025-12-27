@@ -21,7 +21,12 @@
     "db:reset": "prisma migrate reset --force",
     "admin:create": "node scripts/create-admin.js",
     "admin:test": "node scripts/test-login.js",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "vercel:build": "prisma generate && prisma migrate deploy && next build",
+    "vercel:dev": "vercel dev",
+    "vercel:deploy": "vercel --prod",
+    "deploy:setup": "tsx scripts/deploy-setup.ts",
+    "postbuild": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
