@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
@@ -22,11 +23,9 @@
     "admin:create": "node scripts/create-admin.js",
     "admin:test": "node scripts/test-login.js",
     "prepare": "husky install",
-    "vercel:build": "prisma generate && prisma migrate deploy && next build",
     "vercel:dev": "vercel dev",
     "vercel:deploy": "vercel --prod",
-    "deploy:setup": "tsx scripts/deploy-setup.ts",
-    "postbuild": "prisma generate"
+    "deploy:setup": "tsx scripts/deploy-setup.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",

@@ -30,11 +30,11 @@ Deploy HealthPeDhyan in under 15 minutes.
 1. Go to https://vercel.com/dashboard
 2. Click **"Add New..."** > **"Project"**
 3. Import your GitHub repository
-4. In **Environment Variables**, add:
+4. **⚠️ IMPORTANT**: Add environment variables BEFORE deploying:
 
    ```bash
-   # Required
-   DATABASE_URL=<paste-your-neon-connection-string>
+   # Required - MUST SET THESE BEFORE FIRST DEPLOYMENT
+   DATABASE_URL=<paste-your-neon-connection-string-from-step-1>
    NEXTAUTH_SECRET=<generate-random-string>
    NEXTAUTH_URL=https://your-app.vercel.app
    NEXT_PUBLIC_APP_URL=https://your-app.vercel.app
@@ -51,6 +51,8 @@ Deploy HealthPeDhyan in under 15 minutes.
    ```bash
    openssl rand -base64 32
    ```
+
+   **⚠️ CRITICAL**: The `DATABASE_URL` must be set BEFORE clicking deploy, otherwise database migrations will fail during build!
 
 5. Click **"Deploy"**
 6. Wait 2-3 minutes
@@ -126,9 +128,23 @@ pnpm deploy:setup
 
 **Common Issues**:
 
-1. **Build fails**: Check environment variables are set correctly
-2. **Database connection fails**: Verify `DATABASE_URL` includes `?sslmode=require`
-3. **Migrations fail**: Ensure Neon database is accessible
+1. **Build fails with "table does not exist"**:
+   - ❌ DATABASE_URL not set in Vercel environment variables
+   - ✅ Go to Vercel > Settings > Environment Variables
+   - ✅ Add DATABASE_URL with your Neon connection string
+   - ✅ Redeploy: Deployments > ⋯ > Redeploy
+
+2. **Database connection fails**:
+   - Verify `DATABASE_URL` includes `?sslmode=require`
+   - Check Neon database is running (not paused)
+
+3. **Migrations fail**:
+   - Ensure Neon database is accessible
+   - Use the **pooled connection** string from Neon
+
+4. **Build works locally but fails on Vercel**:
+   - Check all environment variables are set in Vercel
+   - Make sure DATABASE_URL is correct
 
 **Support**:
 - Vercel Docs: https://vercel.com/docs

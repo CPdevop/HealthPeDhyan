@@ -1,12 +1,7 @@
 {
   "version": 2,
-  "buildCommand": "pnpm prisma generate && pnpm prisma migrate deploy && pnpm build",
-  "installCommand": "pnpm install --frozen-lockfile",
   "framework": "nextjs",
   "regions": ["bom1"],
-  "env": {
-    "DATABASE_URL": "@database_url"
-  },
   "headers": [
     {
       "source": "/(.*)",
